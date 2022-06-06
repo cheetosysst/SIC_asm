@@ -5,32 +5,40 @@
 
 #define endl "\n"
 
-struct locptr {
-	std::string label;
-	int32_t address;
+struct instruction {
+	uint8_t opcode;
+	uint8_t len;
 };
 
-struct instruction {
-	int8_t opcode;
-	int8_t n;
-	int8_t i;
-	int8_t x;
-	int8_t b;
-	int8_t p;
-	int8_t e;
-	
-	int32_t target;
-	int32_t disp;
+struct directives {
+	void (*func)();
+};
 
-	int8_t format;
-	int8_t r1;
-	int8_t r2;
+struct imCode {
+	std::string ins;
+	uint32_t len;
+	uint8_t opcode;
+	std::string data;
+	bool extFormat;
+};
+
+
+struct intermediate {
+	std::string name;
+	uint32_t baseAddress;
+	uint32_t size;
+	uint32_t start;
+	std::vector<std::pair<uint32_t, uint8_t>> reloctab;
+	std::vector<imCode> codes;
+	std::unordered_map<std::string, uint32_t> symtab;
 };
 
 size_t split(const std::string& txt, std::vector<std::string>& strs, char ch);
 
-inline std::string &ltrim(std::string &s);
-inline std::string &rtrim(std::string &s);
-std::string trim(std::string &s);
+std::vector<std::string> parser(std::string line);
+
+std::string getUpper(std::string str);
+
+uint32_t addrExtract(std::string addr);
 
 #endif

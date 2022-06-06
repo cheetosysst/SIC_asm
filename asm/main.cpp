@@ -1,17 +1,17 @@
-#include <bits/stdc++.h>
-#include "misc.hpp"
 #include "asm.hpp"
+#include "misc.hpp"
+#include <bits/stdc++.h>
 
 using namespace std;
 
-int main() {
-	printf("SIC/XE compiler\n");
+int main()
+{
+    printf("SIC/XE compiler\n");
 
-	ifstream sourceFile;
-	sourceFile.open("test.sic");
+    ifstream sourceFile;
+    sourceFile.open("sample.sic");
 
-	passOne(sourceFile);
-	
+    passOne(sourceFile);
 
-	return 0;
+    return 0;
 }
