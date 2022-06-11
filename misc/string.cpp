@@ -50,18 +50,29 @@ std::vector<std::string> parser(std::string line)
     return instruction;
 }
 
+std::vector<std::string> parserDual(std::string line)
+{
+    std::vector<std::string> instruction;
+
+    std::string chrTab("\t");
+    std::string chrSpace(",");
+
+    std::size_t posTab = line.find(chrTab);
+    while (posTab != std::string::npos) {
+        line.replace(posTab, chrTab.length() - 1, " ");
+        posTab = line.find(chrTab, posTab + 1);
+    }
+
+    split(line, instruction, ' ');
+
+    // TODO string trim
+
+    return instruction;
+}
+
 std::string getUpper(std::string str)
 {
     std::transform(str.begin(), str.end(), str.begin(),
         [](unsigned char c) { return std::toupper(c); });
     return str;
-}
-
-// uint8_t literalExtract(std::string addr)
-// {
-// }
-
-uint32_t addrExtract(std::string addr)
-{
-    return (uint32_t) addr[0];
 }

@@ -36,9 +36,12 @@ struct intermediate {
 size_t split(const std::string& txt, std::vector<std::string>& strs, char ch);
 
 std::vector<std::string> parser(std::string line);
+std::vector<std::string> parserDual(std::string line);
 
 std::string getUpper(std::string str);
 
-uint32_t addrExtract(std::string addr);
+std::string parsedChar(std::string data);
+std::string parsedHex(std::string data);
+uint8_t addrExtract(std::string addr);
 
 #endif

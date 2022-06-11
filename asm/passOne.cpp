@@ -21,7 +21,7 @@ void passOne(ifstream& source)
 
     string objectName;
     uint32_t startAddress;
-    uint32_t baseAddress;
+    // uint32_t baseAddress;
 
     while (getline(source, line)) {
 
@@ -88,7 +88,7 @@ void passOne(ifstream& source)
                     symtab[instruction[0]] = address;
 
                 tempCode.ins = "RESB";
-                tempCode.len = (uint32_t)stoi(instruction.size() == 3 ? instruction[2] : instruction[1]);
+                tempCode.data = (instruction.size() == 3 ? instruction[2] : instruction[1]);
 
                 imData.codes.push_back(tempCode);
                 address += stoi(instruction.size() == 3 ? instruction[2] : instruction[1]);
@@ -101,7 +101,7 @@ void passOne(ifstream& source)
                     symtab[instruction[0]] = address;
 
                 tempCode.ins = "RESW";
-                tempCode.len = (uint32_t)stoi(instruction.size() == 3 ? instruction[2] : instruction[1]) * 3;
+                tempCode.data = (instruction.size() == 3 ? instruction[2] : instruction[1]);
                 tempCode.opcode = 0xFF;
 
                 imData.codes.push_back(tempCode);
@@ -115,6 +115,7 @@ void passOne(ifstream& source)
                     symtab[instruction[0]] = address;
                 tempCode.ins = "BYTE";
                 tempCode.len = 1;
+                tempCode.data = (instruction.size() == 3 ? instruction[2] : instruction[1]);
                 imData.codes.push_back(tempCode);
 
                 address += 1;
@@ -125,8 +126,9 @@ void passOne(ifstream& source)
             if (directive_word == (string) "WORD") {
                 if (instruction.size() == 3)
                     symtab[instruction[0]] = address;
-                tempCode.ins = "BYTE";
-                tempCode.len = 1;
+                tempCode.ins = "WORD";
+                tempCode.len = 3;
+                tempCode.data = (instruction.size() == 3 ? instruction[2] : instruction[1]);
                 imData.codes.push_back(tempCode);
                 address += 3;
                 // imData.size = address;
@@ -134,7 +136,11 @@ void passOne(ifstream& source)
                 continue;
             }
             if (directive_word == (string) "BASE") {
-                baseAddress = addrExtract(instruction.size() == 3 ? instruction[2] : instruction[1]);
+                // baseAddress = addrExtract(instruction.size() == 3 ? instruction[2] : instruction[1]);
+                tempCode.ins = "BASE";
+                tempCode.len = 0;
+                tempCode.data = (instruction.size() == 3 ? instruction[2] : instruction[1]);
+                imData.codes.push_back(tempCode);
                 idx++;
                 continue;
             }
@@ -176,10 +182,10 @@ void passOne(ifstream& source)
             //     instructionLength++;
             // address--;
         }
-        if (ins == "RSUB") {
-            reloctab.push_back(make_pair(address + 1, (extFormat) ? 5 : 3));
-            // address--;
-        }
+        // if (ins == "RSUB") {
+        //     reloctab.push_back(make_pair(address + 1, (extFormat) ? 5 : 3));
+        //     // address--;
+        // }
         if (extFormat)
             instructionLength++;
 
@@ -190,8 +196,8 @@ void passOne(ifstream& source)
         printf(", opcode: 0x%X", (instruction.size() == 3) ? optab[instruction[1]].opcode : optab[instruction[0]].opcode);
         if (instruction.size() > 1)
             cout << ", data: " << instruction[instruction.size() - 1] << ",\t";
-        printf("locptr: 0x%X", address);
-        printf(", base: 0x%X\n", baseAddress);
+        printf("locptr: 0x%X\n", address);
+        // printf(", base: 0x%X\n", baseAddress);
 
         struct imCode tempCode = {
             ins,

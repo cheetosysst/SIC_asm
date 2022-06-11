@@ -5,6 +5,7 @@
 
 using namespace std;
 
-void passOne(ifstream &source);
+void passOne(ifstream& source);
+void passTwo(ofstream& compiled);
 
 #endif

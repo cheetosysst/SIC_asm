@@ -19,5 +19,8 @@ $(SUBDIR):
 	mkdir -p $(BUILD_DIR)/$@
 	make -C $@
 
+test:
+	diff sampleObject.txt export.txt --color="always"
+
 clean:
 	rm -r build/*
