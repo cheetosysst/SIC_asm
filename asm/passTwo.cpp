@@ -1,11 +1,21 @@
 #include "asm.hpp"
 #include "misc.hpp"
+#include <cmath>
 #include <sstream>
 #include <stdint.h>
 #include <vector>
 
 extern struct intermediate imData;
 extern struct unordered_map<string, instruction> optab;
+std::unordered_map<char, uint8_t> regtab = {
+    { 'A', 0 },
+    { 'X', 1 },
+    { 'L', 2 },
+    { 'B', 3 },
+    { 'S', 4 },
+    { 'T', 5 },
+    { 'F', 6 },
+};
 
 void passTwo(ofstream& compiled)
 {
@@ -27,42 +37,72 @@ void passTwo(ofstream& compiled)
     for (std::vector<imCode>::iterator it = imData.codes.begin(); it != imData.codes.end(); it++) {
         struct imCode current = *it;
         std::string charData;
-        int32_t targetData = 0;
+        uint32_t targetData = 0;
 
         cout << "data: " << current.data;
 
         // Parse data
+        uint8_t addrType = 0;
         switch (addrExtract(current.data)) {
-        case 1: // immediate
+        case 1:
+            // immediate
             std::cout << ",\ttype: \x1b[31m immed\x1b[39m";
+            addrType = 1;
+            current.data.replace(0, 1, "");
+            if (isalpha(current.data[0])) {
+                targetData = imData.symtab[current.data];
+            } else {
+                targetData = stoi(current.data);
+            }
             break;
         case 2:
             // indirect
             std::cout << ",\ttype: \x1b[32m indir\x1b[39m";
+            addrType = 2;
+            current.data.replace(0, 1, "");
+            if (isalpha(current.data[0])) {
+                targetData = imData.symtab[current.data];
+            } else {
+                targetData = stoi(current.data);
+            }
             break;
         case 3:
-            // indexed
+            // dual
             std::cout << ",\ttype: \x1b[33m dual\x1b[39m";
+            addrType = 3;
             break;
         case 4:
-            // immediate
+            // index
             std::cout << ",\ttype: \x1b[34m index\x1b[39m";
+            addrType = 4;
+            current.data.replace(current.data.size() - 2, 2, "");
+            if (isalpha(current.data[0])) {
+                targetData = imData.symtab[current.data];
+            } else {
+                targetData = stoi(current.data);
+            }
             break;
         case 5:
             // hex
+            addrType = 5;
             std::cout << ",\ttype: \x1b[35m hex\x1b[39m";
             charData = parsedHex(current.data);
             break;
         case 6:
             // char
+            addrType = 5;
             std::cout << ",\ttype: \x1b[36m char\x1b[39m";
             charData = parsedChar(current.data);
             break;
         case 7:
+            // Label data
+            addrType = 5;
             std::cout << ",\ttype: \x1b[37m label\x1b[39m";
             targetData = imData.symtab[current.data];
             break;
         case 8:
+            // integer
+            addrType = 5;
             std::cout << ",\ttype: \x1b[37m int\x1b[39m";
             targetData = stoi(current.data);
             break;
@@ -93,6 +133,7 @@ void passTwo(ofstream& compiled)
         } else {
 
             uint32_t entry = current.opcode;
+            std::vector<std::string> regs;
             switch (optab[current.ins].len) {
             case 1:
                 // 1 byte
@@ -102,18 +143,85 @@ void passTwo(ofstream& compiled)
                 break;
             case 2:
                 entry *= 0x100;
-                std::cout << " \t" << std::hex << std::setfill('0') << std::setw(4) << entry;
-                record << "^" << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << entry;
                 recordData += 2;
                 recordCounter += 2;
+
+                split(current.data, regs, ',');
+                entry |= regtab[regs[0][0]] << 4;
+                if (regs.size() > 1) {
+                    entry |= regtab[(char)regs[1][0]];
+                }
+
+
+                std::cout << " \t" << std::hex << std::setfill('0') << std::setw(4) << entry;
+                record << "^" << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << entry;
                 // addressCounter += 2;
                 break;
             case 3:
                 entry *= (current.extFormat) ? 0x1000000 : 0x10000;
-                std::cout << " \t" << std::hex << std::setfill('0') << std::setw((current.extFormat) ? 8 : 6) << entry;
-                record << "^" << std::hex << std::uppercase << std::setfill('0') << std::setw((current.extFormat) ? 8 : 6) << entry;
                 recordData += (current.extFormat) ? 4 : 3;
                 recordCounter += (current.extFormat) ? 4 : 3;
+
+                int64_t disp = targetData - (int64_t)(addressCounter + recordCounter);
+
+                if (addrType == 1) {
+                    if (isalpha(current.data[0])) {
+                        if (abs(disp) <= 0x7FF) {
+                            entry |= disp & 0x7FF;
+                            entry |= 0x02000;
+                        } else {
+                            entry |= (targetData - (uint64_t)baseAddress) & 0x7FF;
+                            entry |= 0x04000;
+                        }
+                    } else {
+                        entry |= targetData;
+                    }
+                    entry |= (current.extFormat)?0x1000000:0x10000;
+                    entry |= (current.extFormat)?0x100000:0;
+                }
+                if (addrType == 2) {
+                    if (abs(disp) <= 0x7FF) {
+                        entry |= disp & 0x7FF;
+                        entry |= 0x02000;
+                    } else {
+                        entry |= (targetData - (uint64_t)baseAddress) & 0x7FF;
+                        entry |= 0x04000;
+                    }
+                    entry |= 0x20000;
+                }
+                if (addrType == 3) {
+                }
+                if (addrType == 4) {
+                    if (abs(disp) <= 0x7FF) {
+                        entry |= disp & 0x7FF;
+                        entry |= 0x02000;
+                    } else {
+                        entry |= (targetData - (uint64_t)baseAddress) & 0x7FF;
+                        entry |= 0x04000;
+                    }
+                    entry |= 0x30000;
+                    entry |= 0x08000;
+                }
+                if (addrType == 5) {
+                    if (current.extFormat) {
+                        entry |= targetData & 0xFFFFF;
+                        entry |= 0x3100000;
+                    } else if (abs(disp) <= 0x7FF) {
+                        entry |= disp & 0xFFF;
+                        entry |= 0x02000;
+                        entry |= 0x30000;
+                    } else {
+                        entry |= (targetData - (uint64_t)baseAddress) & 0xFFF;
+                        entry |= 0x04000;
+                        entry |= 0x30000;
+                    }
+                }
+                if (current.ins=="RSUB") {
+                    entry |= 0x30000;
+                }
+
+                std::cout << " \t" << std::hex << std::setfill('0') << std::setw((current.extFormat) ? 8 : 6) << entry;
+                record << "^" << std::hex << std::uppercase << std::setfill('0') << std::setw((current.extFormat) ? 8 : 6) << entry;
                 // addressCounter += (current.extFormat) ? 4 : 3;
                 break;
             }
